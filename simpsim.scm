@@ -160,11 +160,11 @@
 			(carbons (template-carbons template))
 			(editables (template-editables template)))
 		(string-concatenate (append
-							 (list (carbons-script carbons data-dir run-dir)
+							 (list (format #f "mkdir -p ~a~%" run-dir)
+								   (carbons-script carbons data-dir run-dir)
 								   (editables-script editables data-dir run-dir))
 							 (map (lambda (ammend)
 									(ammendments-script ammend editables data-dir run-dir))
 								  ammendments)))))))
 
 	
-				   
