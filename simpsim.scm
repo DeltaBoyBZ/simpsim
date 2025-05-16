@@ -40,6 +40,10 @@
   (lambda (edit)
 	(cdr (assoc 'vars (cdr edit)))))
 
+(define editable-format
+  (lambda (edit type)
+	(cdr (assoc type (cdr (assoc 'format (cdr edit)))))))
+
 (define var-id
   (lambda (var)
 	(car var)))
@@ -145,8 +149,12 @@
 																				   (var-name (assoc varid (editable-vars edit)))
 																				   "\\`")))
 													   (map ammendment-var-from (ammendment-vars ammend)))
-												  (map (lambda (x) (format #f "~a"x))
-													   (map ammendment-var-to   (ammendment-vars ammend))))))
+												  (map (lambda (type to) ((editable-format edit type) to))
+													   (map var-type
+															(map (lambda (varid)
+																   (assoc varid (editable-vars edit)))
+																 (map car (ammendment-vars ammend))))
+													   (map ammendment-var-to (ammendment-vars ammend))))))
 							 ammendments))))
 														 
 														 
