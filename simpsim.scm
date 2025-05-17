@@ -24,6 +24,16 @@
   (lambda (template)
 	(cdr (assoc 'data-dir template))))
 
+(define carbon-src 
+  (lambda (carbon)
+    (if (pair? carbon) (car carbon)
+      carbon)))
+
+(define carbon-dst
+  (lambda (carbon)
+    (if (pair? carbon) (cdr carbon)
+      (carbon-src carbon))))
+
 (define editable-id
   (lambda (edit)
 	(car edit)))
@@ -129,8 +139,8 @@
 (define carbons-script
   (lambda (carbons data-dir run-dir)
 	(copy-files data-dir run-dir
-				(map car carbons)
-				(map cdr carbons))))
+				(map carbon-src carbons)
+				(map carbon-src carbons))))
 
 (define editables-script
   (lambda (editables data-dir run-dir)
