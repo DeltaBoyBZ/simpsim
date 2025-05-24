@@ -5,7 +5,7 @@
 		  default))))
 				
 (define copy-file
-  (lambda (src dst)
+ (lambda (src dst)
 	(format #f "cp ~a ~a" src dst)))
 
 (define append-newline
@@ -94,6 +94,29 @@
 (define instance-ammendments
   (lambda (instance)
 	(cdr (assoc 'ammendments instance))))
+
+(define (export-id export)
+  (car export))
+
+(define (export-files export)
+  (cdr (assoc 'files (cdr export))))
+
+(define (export-file-src file)
+  (if (pair? file) (car file)
+	  file))
+
+(define (export-file-dst file)
+  (if (pair? file) (cdr file)
+	  (export-file-src file)))
+
+(define (export-meta export)
+  (cdr (assoc 'meta (cdr export))))
+
+(define (meta-id meta)
+  (car meta))
+
+(define (meta-entry meta)
+  (cdr meta))
 
 (define src-file
   (lambda (dir src-dst)
@@ -184,5 +207,24 @@
 							 (map (lambda (ammend)
 									(ammendments-script ammend editables data-dir run-dir))
 								  ammendments)))))))
+
+(define (make-meta meta)
+  (format #f "echo \"~a\" >> \"$SIMPSIM_EXPORT/meta/~a\"~%"
+		  (meta-entry meta) (meta-id meta)))
+
+(define make-export
+  (lambda (root export)
+	(string-concatenate
+	 (append (list
+			  (format #f "SIMPSIM_EXPORT=\"~a/~a-$(uuidgen)\"~%"
+					  root (export-id export))
+			  "mkdir -p \"$SIMPSIM_EXPORT/meta\"~%")
+			 (append (map (lambda (meta) (make-meta meta))
+						  (export-meta export))
+					 (map (lambda (src dst) (format #f "cp ~a \"$SIMPSIM_EXPORT/~a\"~%"
+													src dst))
+						  (map export-file-src (export-files export))
+						  (map export-file-dst (export-files export))))))))
+						  
 
 	
