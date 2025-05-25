@@ -233,7 +233,7 @@
 	 (append (list
 			  (format #f "SIMPSIM_EXPORT=\"~a/~a-$(uuidgen)\"~%"
 					  root (export-id export))
-			  "mkdir -p \"$SIMPSIM_EXPORT/meta\"~%")
+			  "mkdir -p \"$SIMPSIM_EXPORT/meta\"\n")
 			 (append (map (lambda (meta) (make-meta meta))
 						  (export-meta export))
 					 (map (lambda (src dst) (format #f "cp -r ~a \"$SIMPSIM_EXPORT/~a\"~%"
