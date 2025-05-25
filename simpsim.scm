@@ -1,3 +1,6 @@
+(define-module (simpsim))
+
+
 (use-modules (srfi srfi-1))
 
 (define assoc-or
@@ -197,7 +200,7 @@
 														 
 														 
 					
-(define make-script
+(define-public make-script
   (lambda (instance)
 	(let ((template (instance-template instance))
 		  (ammendments (instance-ammendments instance)))
@@ -224,7 +227,7 @@
   (string-concatenate (map (lambda (x) (string-concatenate (list x "/")))
 						   (reverse (cdr (reverse (string-split str (lambda (x) (char=? #\/ x)))))))))
 
-(define make-export
+(define-public make-export
   (lambda (root export)
 	(string-concatenate
 	 (append (list
