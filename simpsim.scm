@@ -11,7 +11,7 @@
 				
 (define copy-file
  (lambda (src dst)
-	(format #f "cp ~a ~a" src dst)))
+	(format #f "cp ~a ~a~%" src dst)))
 
 (define append-newline
   (lambda (str)
@@ -156,31 +156,33 @@
 
 (define copy-files
   (lambda (src-dir dst-dir src-lst dst-lst)
-	(string-concatenate (map append-newline
-							 (map (lambda (src dst)
-									(copy-file src dst))
-								  (map (prepend-dir src-dir) src-lst)
-								  (map (prepend-dir dst-dir) dst-lst))))))
+	(string-concatenate (append	(map (lambda (dst-subdir)
+									   (format #f "mkdir -p \"~a/~a\"~%"
+											   dst-dir dst-subdir))
+									 (delete-duplicates (map dirname dst-lst)))
+								(map (lambda (src dst)
+									   (copy-file src dst))
+									 (map (prepend-dir src-dir) src-lst)
+									 (map (prepend-dir dst-dir) dst-lst))))))
 									
 
 (define quick-replace
   (lambda (file search replace)
-	(format #f "sed -i -e \"s/~a/~a/g\" ~a" search replace file)))
+	(format #f "sed -i -e \"s/~a/~a/g\" ~a~%" search replace file)))
 
 (define replace-in-file
   (lambda (file search-lst replace-lst)
 	(string-concatenate
-	 (map append-newline
-		  (map (lambda (s r)
-				 (quick-replace file s r))
-			   search-lst
-			   replace-lst)))))
+	 (map (lambda (s r)
+			(quick-replace file s r))
+		  search-lst
+		  replace-lst))))
 
 (define carbons-script
   (lambda (carbons data-dir run-dir)
 	(copy-files data-dir run-dir
 				(map carbon-src carbons)
-				(map carbon-src carbons))))
+				(map carbon-dst carbons))))
 
 (define editables-script
   (lambda (editables data-dir run-dir)

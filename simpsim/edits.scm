@@ -14,11 +14,11 @@
 	  (format #f "sed -i -e \"s/^\\(\\s*~a\\s*=\\s*\\)\\(.*\\)$//g\" \"~a\"~%"
 			  var file))))
 
-(define-public (remove-when null-val)
+(define-public (remove-when pred)
   (lambda (var)
 	(lambda (val)
 	  (lambda (file)
-		(if (equal? val null-val)
+		(if (pred val)
 			(((remove-param var) val) file)
 			"")))))
 				
