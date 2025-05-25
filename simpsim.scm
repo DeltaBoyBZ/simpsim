@@ -1,3 +1,5 @@
+(use-modules (srfi srfi-1))
+
 (define assoc-or
   (lambda (key lst default)
 	(let ((cand (assoc key lst)))
@@ -99,7 +101,10 @@
   (car export))
 
 (define (export-files export)
-  (cdr (assoc 'files (cdr export))))
+  (assoc-or 'files (cdr export) '()))
+
+(define (export-dirs export)
+  (assoc-or 'dirs (cdr export) '()))
 
 (define (export-file-src file)
   (if (pair? file) (car file)
@@ -110,7 +115,7 @@
 	  (export-file-src file)))
 
 (define (export-meta export)
-  (cdr (assoc 'meta (cdr export))))
+  (assoc-or 'meta (cdr export) '()))
 
 (define (meta-id meta)
   (car meta))
@@ -212,6 +217,13 @@
   (format #f "echo \"~a\" >> \"$SIMPSIM_EXPORT/meta/~a\"~%"
 		  (meta-entry meta) (meta-id meta)))
 
+(define (basename str)
+  (car (reverse (string-split str (lambda (x) (char=? #\/ x))))))
+
+(define (dirname str)
+  (string-concatenate (map (lambda (x) (string-concatenate (list x "/")))
+						   (reverse (cdr (reverse (string-split str (lambda (x) (char=? #\/ x)))))))))
+
 (define make-export
   (lambda (root export)
 	(string-concatenate
@@ -221,6 +233,14 @@
 			  "mkdir -p \"$SIMPSIM_EXPORT/meta\"~%")
 			 (append (map (lambda (meta) (make-meta meta))
 						  (export-meta export))
+					 (map (lambda (src dst) (format #f "cp -r ~a \"$SIMPSIM_EXPORT/~a\"~%"
+													src dst))
+						  (map export-file-src (export-dirs export))
+						  (map export-file-dst (export-dirs export)))
+					 (map (lambda (dir) (format #f "mkdir -p \"$SIMPSIM_EXPORT/~a\"~%" dir))
+						  (delete-duplicates (filter (lambda (x) (> (string-length x) 0))
+													 (map dirname
+														  (map export-file-dst (export-files export))))))
 					 (map (lambda (src dst) (format #f "cp ~a \"$SIMPSIM_EXPORT/~a\"~%"
 													src dst))
 						  (map export-file-src (export-files export))
