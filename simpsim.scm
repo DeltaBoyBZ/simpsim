@@ -59,6 +59,15 @@
   (lambda (edit type)
 	(cdr (assoc type (cdr (assoc 'format (cdr edit)))))))
 
+(define (editable-edits edit)
+  (assoc-or 'edits (cdr edit) '()))
+
+(define (edit-id edit)
+  (car edit))
+
+(define (edit-proc edit)
+  (cdr edit))
+
 (define var-id
   (lambda (var)
 	(car var)))
@@ -180,24 +189,18 @@
 				(map editable-dst editables))))
 
   
-(define ammendments-script
-  (lambda (ammendments editables data-dir run-dir)
-	(string-concatenate (map (lambda (ammend)
-							   (let ((edit (assoc (ammendment-editable ammend) editables)))
-								 (replace-in-file ((prepend-dir run-dir) (editable-dst edit))
-												  (map (lambda (varid)
-														 (string-concatenate (list "\\`"
-																				   (var-name (assoc varid (editable-vars edit)))
-																				   "\\`")))
-													   (map ammendment-var-from (ammendment-vars ammend)))
-												  (map (lambda (type to) ((editable-format edit type) to))
-													   (map var-type
-															(map (lambda (varid)
-																   (assoc varid (editable-vars edit)))
-																 (map car (ammendment-vars ammend))))
-													   (map ammendment-var-to (ammendment-vars ammend))))))
-							 ammendments))))
-														 
+(define (ammendment-script ammend editables data-dir run-dir)
+  (let* ((editable (assoc (ammendment-editable ammend) editables))
+		 (edits    (editable-edits editable))
+		 (vars     (ammendment-vars ammend)))
+	(string-concatenate (map (lambda (f)
+							   (f ((prepend-dir run-dir) (editable-dst editable))))
+							 (map (lambda (edit-id edit-val)
+									((edit-proc (assoc edit-id edits)) edit-val))
+								  (map ammendment-var-from vars)
+								  (map ammendment-var-to vars))))))
+								 
+							 														 
 														 
 					
 (define-public make-script
@@ -213,7 +216,7 @@
 								   (carbons-script carbons data-dir run-dir)
 								   (editables-script editables data-dir run-dir))
 							 (map (lambda (ammend)
-									(ammendments-script ammend editables data-dir run-dir))
+									(ammendment-script ammend editables data-dir run-dir))
 								  ammendments)))))))
 
 (define (make-meta meta)
