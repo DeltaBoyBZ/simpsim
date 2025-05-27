@@ -1,0 +1,134 @@
+#+title: SIMPSIM
+
+* Exporting
+
+Exporting can be used in many contexts e.g.
+
+- exporting a build of a project
+- exporting a set up scripts which make up a workflow
+- exporting a significant run
+  
+Many exports are similar in the sense that they belong to the same project
+and contain similar files with small changes. 
+The problem of managing these becomes worse when we consider differences
+in compiled binaries. 
+
+Thus, when exporting, it is useful to have metadata. 
+For example, the date of export, or the Git branch we happen
+to have checked out. 
+It is convenient to have these computed automatically on export. 
+
+The `simpsim` Guile module provides the function `make-export`, 
+which takes as input a data structure representing the exported bundle. 
+The function returns a Bash script in string form. 
+
+Here is an example of a simple export script. 
+
+#+begin_src scheme
+  (use-modules (simpsim)
+  			 (simpsim metas))
+
+  (define my-export
+    `("project"
+  	(files . "exe/compiled-code")
+  	(dirs  . "par")
+  	(meta (branch . ,(meta-git-current-branch))
+  		  (commit . ,(meta-git-head-commit))
+  		  (date   . "$(date)")
+  		  (seconds . "$(date +%s)"))))
+
+  (display (make-export "$HOME/simpsim-data" my-export))
+#+end_src
+
+The final line constructs the script which exports the desired data and metadata,
+then prints it to standard output.
+
+Observer that the script does not execute the commands in the script.
+Simpsim itself does not interact with the file system.
+Rather, it produces scripts which do, and the user should pipe this script
+into a shell (upon reviewing of course).
+
+#+begin_example
+$ guile -s export.scm | sh
+#+end_example
+
+A subdirectory of =$HOME/simpsim-data= called =project-<uuid>= is created and the given files
+and directories are copied to it.
+The =<uuid>= guarantee no name clashes in the root. 
+There is then a =meta= subdirectory which contains information distinguishing
+exports under the same project name.
+
+* Importing
+
+A list of exports under the name =project= are listed by running:
+
+#+begin_example
+$ getsim project
+#+end_example
+
+All listed directories will be subdirectories of the directory specified in
+environment variable =SIMPSIM_ROOT=. In general, we expect many subdirectories
+to be listed. The can be filtered according to the value of their metadata.
+For example, if we want a version of our code which was built on the
+experimental branch we might run:
+
+#+begin_example
+$ getsim project | simmeta branch experimental
+#+end_example
+
+Furthermore, if there are still multiple exports, we can select the one
+which was built most recently with:
+
+#+begin_example
+$ getsim project | simmeta branch experimental | simrecent
+#+end_example
+
+When we have a single directory, we can then copy that directory to our working directory.
+
+#+begin_example
+$ getsim project | simmeta branch experimental | simrecent | (tee && echo data) | xargs cp -r
+#+end_example
+
+
+* Instancing
+
+There are many scenarios in which we want to set up many runs from
+identical or similar data.
+Identical data might be in the form of compiled binaries or data tables.
+Similar data could be for example parameter files which we would like
+to modify slightly for each run.
+
+Instancing comprises three steps:
+- define a basic template
+- define a set of modifications to the template
+- define an instance
+
+Here is a simple template:
+
+#+begin_src scheme
+  (define template
+    `((data-dir . "data")
+  	(carbons "compiled-code")
+  	(editables (parfile (src . "par/basic.par")
+  						(dst . "input.par")
+  						(edits (dx . ,(c-double-format (c-style-param "dx")))
+  							   (dt . ,(c-double-format (c-style-param "dt")))
+  							   (cfl . ,((edit-compose c-style-param
+  													  (remove-when (lambda (x) (< x 0))))) "dx") "dx"))))))
+#+end_src
+
+Templates consist of two parts: carbons and editables.
+The =carbons= are /carbon copies/ of files in the data directory.
+The =editables= are files which are modified in some way for our instance.
+The =edits= are handles to functions which, given some value, return a script
+for making the necessary edit to the file.
+
+The =c-double-format= is a format wratter for the standard edit =c-style-param=,
+which ensures that a Scheme double will be formatted correctly as a string,
+which is then passed to =c-style-param=.
+
+The =edit-compose= allows us to make sequential edits corresponding to the same variable.
+
+
+
+
