@@ -1,6 +1,59 @@
 #+title: SIMPSIM
 
-* Exporting
+* Get Started
+
+** Dependencies
+
+Simpsim is written in Guile Scheme, so it is recommended the user install the
+latest stable version. For information, visit https://www.gnu.org/software/guile/.
+
+Simpsim produces shell scripts. These should run in any POSIX-compliant shell,
+but most testing has used Bash.
+
+As Simpsim is extensible, it is possible that produced scripts use commands
+which are not on the host system.
+Standard scripts however only use standard tools such as =grep= and =sed=,
+which the user is very likely to have if they are using any GNU/Linux disro.
+
+** System Setup
+
+In order to use Simpsim, we need two things:
+
+1. For Guile to recognise the Simpsim modules
+2. For Simpsim scripts to be callable
+
+
+*** Guile Modules
+
+The simplest way to make Guile recognise Simpsim, is to add the repo root
+to your =GUILE_LOAD_PATH=,
+
+#+begin_src bash
+  export GUILE_LOAD_PATH="/path/to/simpsim:$GUILE_LOAD_PATH"
+#+end_src
+
+To check that this has worked, start a =guile= REPL and run,
+
+#+begin_src scheme
+  (use-modules (simpsim)
+			   (simpsim formats)
+			   (simpsim edits)
+			   (simpsim metas))
+#+end_src
+
+It should execute without issue.
+
+*** Shell Scripts
+
+Add the Simpsim root to your =PATH=,
+
+#+begin_src bash
+  export PATH="/path/to/simpsim:$PATH"
+#+end_src
+
+* Tutorial
+
+** Exporting
 
 Exporting can be used in many contexts e.g.
 
@@ -58,7 +111,7 @@ The =<uuid>= guarantee no name clashes in the root.
 There is then a =meta= subdirectory which contains information distinguishing
 exports under the same project name.
 
-* Importing
+** Importing
 
 A list of exports under the name =project= are listed by running:
 
@@ -90,7 +143,7 @@ $ getsim project | simmeta branch experimental | simrecent | (tee && echo data) 
 #+end_example
 
 
-* Instancing
+** Instancing
 
 There are many scenarios in which we want to set up many runs from
 identical or similar data.
@@ -106,15 +159,22 @@ Instancing comprises three steps:
 Here is a simple template:
 
 #+begin_src scheme
-  (define template
-    `((data-dir . "data")
-  	(carbons "compiled-code")
-  	(editables (parfile (src . "par/basic.par")
-  						(dst . "input.par")
-  						(edits (dx . ,(c-double-format (c-style-param "dx")))
-  							   (dt . ,(c-double-format (c-style-param "dt")))
-  							   (cfl . ,((edit-compose c-style-param
-  													  (remove-when (lambda (x) (< x 0))))) "dx") "dx"))))))
+	(use-modules (simpsim edits)
+				 (simpsim formats))
+			   
+	(define (less-than a)
+	  (lambda (x) (< x a))))
+
+	(define template
+	  `((data-dir . "data")
+		(carbons "compiled-code")
+		(editables (parfile (src . "par/basic.par")
+							(dst . "input.par")
+							(edits (grid-spacing . ,(c-double-format (c-style-param "dx")))
+								   (time-step    . ,(c-double-format (c-style-param "dt")))
+								   (cfl . ,((edit-compose c-style-param
+														  (remove-when (less-than 0)))
+											"cfl")))))))
 #+end_src
 
 Templates consist of two parts: carbons and editables.
@@ -128,7 +188,81 @@ which ensures that a Scheme double will be formatted correctly as a string,
 which is then passed to =c-style-param=.
 
 The =edit-compose= allows us to make sequential edits corresponding to the same variable.
+The =c-style-param= and =(remove-when (less-than 0))= are both acceptable edits on their own.
+But together, they allow an instance to set a value of some parameter and for the
+parameter to be conditionally deleted from the file.
+
+Once a template is defined, we define modifications e.g.
+
+#+begin_src scheme
+  (define (calculate-dt dx cfl dt0)
+	(if (< (/ dt0 dx) cfl) dt0
+		(calculate-dt dx cfl (/ dt0 2))))
+  
+  (define setup-grid (dx cfl dt0)
+	`((editable . parfile)
+	  (vars (grid-spacting . ,dx)
+			(time-step     . ,(calculate-dt dx cfl dt0)))))
+
+  (define setup-output (dx cfl t-plt t-chk)
+	(let (dt (calculate-dt dx cfl t-chk))
+	  `((editable . parfile)
+		(vars (checkpoint-steps . ,(/ t-chk dt))
+			  (plot-steps       . ,(/ t-plt dt))))))
+#+end_src
+
+Then the instance, which typically defines a single run of our simulation,
+
+#+begin_src scheme
+  (define (sim-run dx cfl t-plt t-chk)
+	`((run-dir . (format #f "run-dr=~,4f" dr))
+	  (template . ,template)
+	  (ammendments ,(setup-grid dx cfl t-chk)
+				   ,(setup-output dx cfl t-plt t-chk))))
+#+end_src
+
+With all this, we can obtain the Bash script generating a desired run with e.g.
+
+#+begin_src scheme
+  (use-modules (simpsim))
+  
+  (display (make-script (sim-run 0.001 0.4 0.1 5.0)))
+#+end_src
+
+** Creating Many (related) Runs
+
+For single runs, using a tool like Simpsim is likely unnecessary.
+However, if we wish to created many related runs, Simpsim helps us
+to systematically generate the correct parameters in a way which
+evades human error.
+
+The example which was the inspiration for Simpsim is creating a set of runs
+for a convergence test. With the framework above,
+
+#+begin_src scheme
+  (use-modules (simpsim))
+  
+  (define (res-pair dx)
+	(list dx (/ dx 3.0)))
+
+  (display (string-concatenate (map make-script
+									(map (lambda (dx) (sim-run dx 0.4 0.1 5.0))
+										 (delete-duplicates
+										  (apply append
+												 (map res-pair
+													  '(0.3 0.27 0.24 0.21 0.18
+															0.15 0.12 0.09 0.06
+															0.03 0.027 0.024 0.021 0.018
+															0.015 0.012 0.009 0.006
+															0.003))))))))
+#+end_src
+
+The produced script creates many runs over a range of spatial resolutions.
+The time steps are selected automatically such that:
+
+- They satisfy the CFL condition
+- They evenly divide (to double precision) the checkpoint time =T\=5.0=
 
 
-
-
+The data produced by these simulations is then ideal for studying the convergence
+of a numerical scheme impelemented by the simulation.
