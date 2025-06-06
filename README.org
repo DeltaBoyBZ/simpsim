@@ -1,5 +1,24 @@
 #+title: SIMPSIM
 
+* Introduction
+
+Simpsim is a framework for generating simulation runs in a way which is
+reproducable and avoids human error.
+It abstracts the workflow into three stages:
+
+1. Exporting data necessary to do runs e.g. executables and standard parameter files
+2. Importing data by means of querying what has been exported
+3. Producing (many) runs by means of modifying templates
+
+
+The third stage is further segmented into templating, modifying, and instancing.
+
+Simpsim grew out of the desire to quickly generate runs for testing minor variations
+of the same program.
+It allowed similarly-named builds to be tested in a consistent way,
+while maintaining information about each build so that there can be
+little doubt about the results of testing.
+
 * Get Started
 
 ** Dependencies
@@ -79,16 +98,16 @@ Here is an example of a simple export script.
 
 #+begin_src scheme
   (use-modules (simpsim)
-  			 (simpsim metas))
+			   (simpsim metas))
 
   (define my-export
-    `("project"
-  	(files . "exe/compiled-code")
-  	(dirs  . "par")
-  	(meta (branch . ,(meta-git-current-branch))
-  		  (commit . ,(meta-git-head-commit))
-  		  (date   . "$(date)")
-  		  (seconds . "$(date +%s)"))))
+	`("project"
+	  (files . "exe/compiled-code")
+	  (dirs  . "par")
+	  (meta (branch . ,(meta-git-current-branch))
+			(commit . ,(meta-git-head-commit))
+			(date   . "$(date)")
+			(seconds . "$(date +%s)"))))
 
   (display (make-export "$HOME/simpsim-data" my-export))
 #+end_src
@@ -159,22 +178,22 @@ Instancing comprises three steps:
 Here is a simple template:
 
 #+begin_src scheme
-	(use-modules (simpsim edits)
-				 (simpsim formats))
-			   
-	(define (less-than a)
-	  (lambda (x) (< x a))))
+  (use-modules (simpsim edits)
+			   (simpsim formats))
 
-	(define template
-	  `((data-dir . "data")
-		(carbons "compiled-code")
-		(editables (parfile (src . "par/basic.par")
-							(dst . "input.par")
-							(edits (grid-spacing . ,(c-double-format (c-style-param "dx")))
-								   (time-step    . ,(c-double-format (c-style-param "dt")))
-								   (cfl . ,((edit-compose c-style-param
-														  (remove-when (less-than 0)))
-											"cfl")))))))
+  (define (less-than a)
+	(lambda (x) (< x a))))
+
+  (define template
+  `((data-dir . "data")
+	(carbons "compiled-code")
+	(editables (parfile (src . "par/basic.par")
+						(dst . "input.par")
+						(edits (grid-spacing . ,(c-double-format (c-style-param "dx")))
+							   (time-step    . ,(c-double-format (c-style-param "dt")))
+							   (cfl . ,((edit-compose c-style-param
+													  (remove-when (less-than 0)))
+										"cfl")))))))
 #+end_src
 
 Templates consist of two parts: carbons and editables.
@@ -198,7 +217,7 @@ Once a template is defined, we define modifications e.g.
   (define (calculate-dt dx cfl dt0)
 	(if (< (/ dt0 dx) cfl) dt0
 		(calculate-dt dx cfl (/ dt0 2))))
-  
+
   (define setup-grid (dx cfl dt0)
 	`((editable . parfile)
 	  (vars (grid-spacting . ,dx)
@@ -241,7 +260,7 @@ for a convergence test. With the framework above,
 
 #+begin_src scheme
   (use-modules (simpsim))
-  
+
   (define (res-pair dx)
 	(list dx (/ dx 3.0)))
 
@@ -261,8 +280,30 @@ The produced script creates many runs over a range of spatial resolutions.
 The time steps are selected automatically such that:
 
 - They satisfy the CFL condition
-- They evenly divide (to double precision) the checkpoint time =T\=5.0=
+- They evenly divide (to double precision) the checkpoint time =T = 5.0=
 
 
 The data produced by these simulations is then ideal for studying the convergence
 of a numerical scheme impelemented by the simulation.
+
+* Goals
+
+** TODO Add More Edit Methods
+
+The existing edit methods are specifically designed for editting parameter files of the form,
+
+#+begin_example
+var = value
+#+end_example
+
+and for adding or deleting such entries. Simpsim is designed to be extensible, so the user can
+create arbitrary modes of editting.
+A greater volume of standard edits would however be a good addition.
+Furthermore, edit methods should be generalised to take more than a single argument,
+or apply to more than one file.
+
+** TODO More Case Studies
+
+Simpsim boasts to be general, but the truth is it has only been implemented on a single project.
+As more projects make use of Simpsim, missing features and current flaws will become more apparent. 
+
