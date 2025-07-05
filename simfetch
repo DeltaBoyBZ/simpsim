@@ -1,0 +1,3 @@
+#!/bin/sh
+
+(tee && echo $1) | xargs cp -r
