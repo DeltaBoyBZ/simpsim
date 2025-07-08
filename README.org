@@ -155,10 +155,10 @@ which was built most recently with:
 $ getsim project | simmeta branch experimental | simrecent
 #+end_example
 
-When we have a single directory, we can then copy that directory to our working directory.
+When we have a single directory, we can then copy that directory to our working directory as =data=.
 
 #+begin_example
-$ getsim project | simmeta branch experimental | simrecent | (tee && echo data) | xargs cp -r
+$ getsim project | simmeta branch experimental | simrecent | simfetch data 
 #+end_example
 
 
