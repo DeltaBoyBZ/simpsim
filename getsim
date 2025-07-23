@@ -1,5 +1,14 @@
 #!/bin/sh
 
-SIMPSIM_ID=$1
+# SIMPSIM_ID=$1
+SIMPSIM_PROJECT=$1
 
-find "$SIMPSIM_ROOT" -regex "^$SIMPSIM_ROOT/$SIMPSIM_ID-[-0-9a-zx]+$"
+# find "$SIMPSIM_ROOT" -regex "^$SIMPSIM_ROOT/$SIMPSIM_ID-[-0-9a-zx]+$"
+for DIR in $(find $SIMPSIM_ROOT -maxdepth 1) ; do
+	# echo $DIR
+	[ -f "$DIR/meta/project" ] || continue
+	# cat $DIR/meta/project
+	if [[ $(cat "$DIR/meta/project") == "$SIMPSIM_PROJECT" ]] ; then
+		echo $DIR
+	fi
+done

@@ -240,7 +240,8 @@
 					  root (export-id export))
 			  "mkdir -p \"$SIMPSIM_EXPORT/meta\"\n")
 			 (append (map (lambda (meta) (make-meta meta))
-						  (export-meta export))
+						  (cons `(project . ,(export-id export))
+								(export-meta export)))
 					 (map (lambda (src dst) (format #f "cp -r ~a \"$SIMPSIM_EXPORT/~a\"~%"
 													src dst))
 						  (map export-file-src (export-dirs export))

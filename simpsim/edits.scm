@@ -26,7 +26,7 @@
 (define-public (insert-when-absent var)
   (lambda (val)
 	(lambda (file)
-	  (format #f "grep \"^\\s*~a\\s*=\" \"~a\" || echo \"~a = ~a\" >> \"~a\"~%"
+	  (format #f "grep \"^\\s*~a\\s*=\" \"~a\" > /dev/null || echo \"~a = ~a\" >> \"~a\"~%"
 			  var file
 			  var val file))))
 
