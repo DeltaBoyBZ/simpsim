@@ -16,6 +16,15 @@
   (lambda (x)
     (format #f "~d" (inexact->exact (ceiling x)))))
 
+(define-public (array-format paren delim elem-format)
+  (lambda (x)
+	(format #f "~a ~a ~a ~a"
+			(car paren) (elem-format (car x))
+			(string-concatenate
+			 (map (lambda (xx) (format #f "~a ~a" delim (elem-format xx)))
+				  (cdr x)))
+			(cdr paren))))
+  
 (define-public raw-format
   (lambda (x) x))
 

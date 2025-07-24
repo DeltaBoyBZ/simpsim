@@ -92,7 +92,7 @@
 	(let ((valstr (val-format val)))
 	(lambda (file)
 	  (if (eq? val 'none) (nested-c-comment file varchain)
-	   	  (format #f "(~a && ~a || ~a) > /tmp/paredit && mv /tmp/paredit ~a"
+	   	  (format #f "(~a && ~a || ~a) > /tmp/paredit && mv /tmp/paredit ~a~%"
 				  (nested-c-search file varchain)
 				  (nested-c-replace file varchain valstr)
 				  (nested-c-insert file varchain valstr)
