@@ -179,21 +179,19 @@ Here is a simple template:
 
 #+begin_src scheme
   (use-modules (simpsim edits)
-			   (simpsim formats))
+  			 (simpsim formats))
 
   (define (less-than a)
-	(lambda (x) (< x a))))
+    (lambda (x) (< x a))))
 
   (define template
   `((data-dir . "data")
-	(carbons "compiled-code")
-	(editables (parfile (src . "par/basic.par")
-						(dst . "input.par")
-						(edits (grid-spacing . ,(c-double-format (c-style-param "dx")))
-							   (time-step    . ,(c-double-format (c-style-param "dt")))
-							   (cfl . ,((edit-compose c-style-param
-													  (remove-when (less-than 0)))
-										"cfl")))))))
+    (carbons "compiled-code")
+    (editables (parfile (src . "par/basic.par")
+  					  (dst . "input.par")
+  					  (edits (grid-spacing . ,(generic-c "dx" c-double-format))
+  							 (time-step    . ,(generic-c "dt" c-double-format))
+  							 (output-steps . ,(generic-c "Nout" int-format)))))))
 #+end_src
 
 Templates consist of two parts: carbons and editables.
@@ -202,14 +200,11 @@ The =editables= are files which are modified in some way for our instance.
 The =edits= are handles to functions which, given some value, return a script
 for making the necessary edit to the file.
 
-The =c-double-format= is a format wratter for the standard edit =c-style-param=,
-which ensures that a Scheme double will be formatted correctly as a string,
-which is then passed to =c-style-param=.
-
-The =edit-compose= allows us to make sequential edits corresponding to the same variable.
-The =c-style-param= and =(remove-when (less-than 0))= are both acceptable edits on their own.
-But together, they allow an instance to set a value of some parameter and for the
-parameter to be conditionally deleted from the file.
+The =c-double-format= is a formatting function which converts values in Scheme
+to an appropariately formatted string.
+The =generic-c= function returns a function whose argument corresponds to a particular value
+of the declared parameter.
+Upon evaulation, this function in turn accepts a specific filename to which the edit applies. 
 
 Once a template is defined, we define modifications e.g.
 
@@ -262,18 +257,18 @@ for a convergence test. With the framework above,
   (use-modules (simpsim))
 
   (define (res-pair dx)
-	(list dx (/ dx 3.0)))
+    (list dx (/ dx 3.0)))
 
   (display (string-concatenate (map make-script
-									(map (lambda (dx) (sim-run dx 0.4 0.1 5.0))
-										 (delete-duplicates
-										  (apply append
-												 (map res-pair
-													  '(0.3 0.27 0.24 0.21 0.18
-															0.15 0.12 0.09 0.06
-															0.03 0.027 0.024 0.021 0.018
-															0.015 0.012 0.009 0.006
-															0.003))))))))
+  								  (map (lambda (dx) (sim-run dx 0.4 0.1 5.0))
+  									   (delete-duplicates
+  										(apply append
+  											   (map res-pair
+  													'(0.3 0.27 0.24 0.21 0.18
+  														  0.15 0.12 0.09 0.06
+  														  0.03 0.027 0.024 0.021 0.018
+  														  0.015 0.012 0.009 0.006
+  														  0.003))))))))
 #+end_src
 
 The produced script creates many runs over a range of spatial resolutions.
@@ -296,14 +291,28 @@ The existing edit methods are specifically designed for editting parameter files
 var = value
 #+end_example
 
+of of the form,
+
+#+begin_example
+foo {
+  bar {
+    baz = value
+  }
+}
+#+end_example
+
 and for adding or deleting such entries. Simpsim is designed to be extensible, so the user can
 create arbitrary modes of editting.
 A greater volume of standard edits would however be a good addition.
 Furthermore, edit methods should be generalised to take more than a single argument,
 or apply to more than one file.
 
+As of now, there is one more mode of file editing:  =nested-c=.
+This appears to work well, but has not been subjected to proper testing. 
+
 ** TODO More Case Studies
 
-Simpsim boasts to be general, but the truth is it has only been implemented on a single project.
-As more projects make use of Simpsim, missing features and current flaws will become more apparent. 
+Simpsim boasts to be general, but the truth is it has only been tested properly on a single project
+As more projects make use of Simpsim, missing features and current flaws will become more apparent.
+
 
