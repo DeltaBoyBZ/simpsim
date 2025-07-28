@@ -28,6 +28,9 @@
 (define-public raw-format
   (lambda (x) x))
 
+(define-public string-format
+  (lambda (x) (format #f "\"~a\"" x)))
+
 (define-public fortran-double-format
   (lambda (x)
 	(string-map (lambda (c) (if (char=? c #\e) #\d
