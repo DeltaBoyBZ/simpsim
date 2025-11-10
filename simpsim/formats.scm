@@ -2,7 +2,7 @@
 
 (use-modules (ice-9 format))
 
-(define-public fortran-double
+(define-public fortran-double-format
   (lambda (x)
 	(let ((comps (string-split (format #f "~,16,2e" x) (lambda (c) (char=? c #\E)))))
 	  (string-concatenate (list (car comps) "d" (cadr comps))))))
