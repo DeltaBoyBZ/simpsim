@@ -10,7 +10,10 @@
 (define-public c-double-format
   (lambda (x)
 	(format #f "~,16,2e" x)))
-	
+
+;; (define-public (c-double-format x)
+  ;; (fortran-double-format x))
+  
 
 (define-public int-format 
   (lambda (x)
@@ -30,9 +33,3 @@
 
 (define-public string-format
   (lambda (x) (format #f "\"~a\"" x)))
-
-(define-public fortran-double-format
-  (lambda (x)
-	(string-map (lambda (c) (if (char=? c #\e) #\d
-								c))
-				(c-double-format x))))
